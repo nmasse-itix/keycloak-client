@@ -6,7 +6,7 @@
 
 # Test binary, build with `go test -c`
 *.test
-mock/
+toolbox/mock/logger.go
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
@@ -20,4 +20,3 @@ vendor/*
 bin/*
 **/debug
 **/.coverprofile
-mock/
