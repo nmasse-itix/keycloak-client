@@ -122,7 +122,7 @@ func main() {
 			var username = strings.ToLower(u.firstname + "." + u.lastname)
 			var email = username + "@cloudtrust.ch"
 			var err error
-			_, err = client.CreateUser(accessToken, reqRealm, tstRealm, keycloak.UserRepresentation{
+			_, err = client.CreateUser(accessToken, tstRealm, keycloak.UserRepresentation{
 				Username:  &username,
 				FirstName: &u.firstname,
 				LastName:  &u.lastname,
@@ -150,15 +150,15 @@ func main() {
 	{
 		{
 			// No parameters.
-			var users, err = client.GetUsers(accessToken, reqRealm, tstRealm)
+			var users, err = client.GetUsers(accessToken, tstRealm)
 			if err != nil {
 				log.Fatalf("could not get users: %v", err)
 			}
-			if len(users.Users) != 50 {
+			if len(users) != 50 {
 				log.Fatalf("there should be 50 users")
 			}
 
-			user, err := client.GetUser(accessToken, tstRealm, *(users.Users[0].ID))
+			user, err := client.GetUser(accessToken, tstRealm, *(users[0].ID))
 			if err != nil {
 				log.Fatalf("could not get user")
 			}
@@ -175,7 +175,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("could not get users: %v", err)
 			}
-			if len(users.Users) != 1 {
+			if len(users) != 1 {
 				log.Fatalf("there should be 1 user matched by email")
 			}
 		}
@@ -186,7 +186,7 @@ func main() {
 				log.Fatalf("could not get users: %v", err)
 			}
 			// Match John and Johnny
-			if len(users.Users) != 2 {
+			if len(users) != 2 {
 				log.Fatalf("there should be 2 user matched by firstname")
 			}
 		}
@@ -196,7 +196,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("could not get users: %v", err)
 			}
-			if len(users.Users) != 3 {
+			if len(users) != 3 {
 				log.Fatalf("there should be 3 users matched by lastname")
 			}
 		}
@@ -206,7 +206,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("could not get users: %v", err)
 			}
-			if len(users.Users) != 1 {
+			if len(users) != 1 {
 				log.Fatalf("there should be 1 user matched by username")
 			}
 		}
@@ -216,7 +216,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("could not get users: %v", err)
 			}
-			if len(users.Users) != 7 {
+			if len(users) != 7 {
 				log.Fatalf("there should be 7 users matched by max")
 			}
 		}
@@ -226,7 +226,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("could not get users: %v", err)
 			}
-			if len(users.Users) != 7 {
+			if len(users) != 7 {
 				log.Fatalf("there should be 7 users matched by search")
 			}
 		}
@@ -243,13 +243,13 @@ func main() {
 			if err != nil {
 				log.Fatalf("could not get Maria: %v", err)
 			}
-			if len(users.Users) != 1 {
+			if len(users) != 1 {
 				log.Fatalf("there should be 1 users matched by search Maria")
 			}
-			if users.Users[0].ID == nil {
+			if users[0].ID == nil {
 				log.Fatalf("user ID should not be nil")
 			}
-			userID = *users.Users[0].ID
+			userID = *users[0].ID
 		}
 		// Update user.
 		var username = "Maria"
@@ -270,10 +270,10 @@ func main() {
 			if err != nil {
 				log.Fatalf("could not get Maria: %v", err)
 			}
-			if len(users.Users) != 1 {
+			if len(users) != 1 {
 				log.Fatalf("there should be 1 users matched by search Maria")
 			}
-			if users.Users[0].LastName == nil || *users.Users[0].LastName != updatedLastname {
+			if users[0].LastName == nil || *users[0].LastName != updatedLastname {
 				log.Fatalf("user was not updated")
 			}
 		}
@@ -300,13 +300,13 @@ func main() {
 			if err != nil {
 				log.Fatalf("could not get Toni: %v", err)
 			}
-			if len(users.Users) != 1 {
+			if len(users) != 1 {
 				log.Fatalf("there should be 1 users matched by search Toni")
 			}
-			if users.Users[0].ID == nil {
+			if users[0].ID == nil {
 				log.Fatalf("user ID should not be nil")
 			}
-			userID = *users.Users[0].ID
+			userID = *users[0].ID
 		}
 		// Delete user.
 		{

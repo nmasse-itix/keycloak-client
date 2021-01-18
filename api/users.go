@@ -26,8 +26,8 @@ const (
 // Parameters: email, first (paging offset, int), firstName, lastName, username,
 // max (maximum result size, default = 100),
 // search (string contained in username, firstname, lastname or email)
-func (c *Client) GetUsers(accessToken string, targetRealmName string, paramKV ...string) (keycloak.UsersPageRepresentation, error) {
-	var resp keycloak.UsersPageRepresentation
+func (c *Client) GetUsers(accessToken string, targetRealmName string, paramKV ...string) ([]keycloak.UserRepresentation, error) {
+	var resp []keycloak.UserRepresentation
 	if len(paramKV)%2 != 0 {
 		return resp, errors.New(keycloak.MsgErrInvalidParam + "." + keycloak.EvenParams)
 	}
