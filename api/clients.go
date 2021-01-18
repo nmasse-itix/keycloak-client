@@ -41,6 +41,11 @@ func (c *Client) UpdateClient(accessToken string, realmName, idClient string, cl
 	return c.put(accessToken, url.Path(clientIDPath), url.Param("realm", realmName), url.Param("id", idClient), body.JSON(clientRep))
 }
 
+// CreateClient creates a new client.
+func (c *Client) CreateClient(accessToken string, realmName string, clientRep keycloak.ClientRepresentation) (string, error) {
+	return c.post(accessToken, nil, url.Path(clientsPath), url.Param("realm", realmName), body.JSON(clientRep))
+}
+
 // GetClientMappers gets mappers of the client specified by id
 func (c *Client) GetClientMappers(accessToke string, realmName, idClient string) ([]keycloak.ClientMapperRepresentation, error) {
 	var resp = []keycloak.ClientMapperRepresentation{}
