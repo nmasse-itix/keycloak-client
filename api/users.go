@@ -26,7 +26,7 @@ const (
 // Parameters: email, first (paging offset, int), firstName, lastName, username,
 // max (maximum result size, default = 100),
 // search (string contained in username, firstname, lastname or email)
-func (c *Client) GetUsers(accessToken string, reqRealmName, targetRealmName string, paramKV ...string) (keycloak.UsersPageRepresentation, error) {
+func (c *Client) GetUsers(accessToken string, targetRealmName string, paramKV ...string) (keycloak.UsersPageRepresentation, error) {
 	var resp keycloak.UsersPageRepresentation
 	if len(paramKV)%2 != 0 {
 		return resp, errors.New(keycloak.MsgErrInvalidParam + "." + keycloak.EvenParams)
@@ -38,7 +38,7 @@ func (c *Client) GetUsers(accessToken string, reqRealmName, targetRealmName stri
 }
 
 // CreateUser creates the user from its UserRepresentation. The username must be unique.
-func (c *Client) CreateUser(accessToken string, reqRealmName, targetRealmName string, user keycloak.UserRepresentation) (string, error) {
+func (c *Client) CreateUser(accessToken string, targetRealmName string, user keycloak.UserRepresentation) (string, error) {
 	return c.post(accessToken, nil, url.Path(userPath), url.Param("realm", targetRealmName), body.JSON(user))
 }
 
