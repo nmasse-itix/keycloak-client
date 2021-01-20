@@ -10,7 +10,6 @@ import (
 
 	commonhttp "github.com/cloudtrust/common-service/errors"
 	"github.com/cloudtrust/keycloak-client/v3"
-	"github.com/cloudtrust/keycloak-client/v3/toolbox"
 	"github.com/pkg/errors"
 	"gopkg.in/h2non/gentleman.v2"
 	"gopkg.in/h2non/gentleman.v2/plugin"
@@ -22,28 +21,12 @@ import (
 
 // Client is the keycloak client.
 type Client struct {
-	apiURL        *url.URL
-	httpClient    *gentleman.Client
-	account       *AccountClient
-	issuerManager toolbox.IssuerManager
-}
-
-// AccountClient structure
-type AccountClient struct {
-	client *Client
+	apiURL     *url.URL
+	httpClient *gentleman.Client
 }
 
 // New returns a keycloak client.
 func New(config keycloak.Config) (*Client, error) {
-	var issuerMgr toolbox.IssuerManager
-	{
-		var err error
-		issuerMgr, err = toolbox.NewIssuerManager(config)
-		if err != nil {
-			return nil, errors.Wrap(err, keycloak.MsgErrCannotParse+"."+keycloak.TokenProviderURL)
-		}
-	}
-
 	var uAPI *url.URL
 	{
 		var err error
@@ -60,13 +43,8 @@ func New(config keycloak.Config) (*Client, error) {
 	}
 
 	var client = &Client{
-		apiURL:        uAPI,
-		httpClient:    httpClient,
-		issuerManager: issuerMgr,
-	}
-
-	client.account = &AccountClient{
-		client: client,
+		apiURL:     uAPI,
+		httpClient: httpClient,
 	}
 
 	return client, nil
@@ -116,25 +94,6 @@ func (c *Client) GetToken(realm string, username string, password string) (strin
 	// fmt.Println()
 
 	return accessToken.(string), nil
-}
-
-// VerifyToken verifies a token. It returns an error it is malformed, expired,...
-func (c *Client) VerifyToken(issuer string, realmName string, accessToken string) error {
-	oidcVerifierProvider, err := c.issuerManager.GetOidcVerifierProvider(issuer)
-	if err != nil {
-		return err
-	}
-
-	verifier, err := oidcVerifierProvider.GetOidcVerifier(realmName)
-	if err != nil {
-		return err
-	}
-	return verifier.Verify(accessToken)
-}
-
-// AccountClient gets the associated AccountClient
-func (c *Client) AccountClient() *AccountClient {
-	return c.account
 }
 
 // get is a HTTP get method.

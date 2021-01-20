@@ -11,16 +11,13 @@ import (
 	"github.com/spf13/pflag"
 )
 
-type keyContext int
-
 const (
 	tstRealm = "__internal"
-	reqRealm = "master"
-	user     = "version"
 )
 
 func main() {
 	var conf = getKeycloakConfig()
+	fmt.Printf("Connecting to KC %s...\n", conf.AddrAPI)
 	var client, err = api.New(*conf)
 	if err != nil {
 		log.Fatalf("could not create keycloak client: %v", err)
@@ -30,11 +27,6 @@ func main() {
 	accessToken, err := client.GetToken("master", "admin", "admin")
 	if err != nil {
 		log.Fatalf("could not get access token: %v", err)
-	}
-
-	err = client.VerifyToken("issuer", "master", accessToken)
-	if err != nil {
-		log.Fatalf("could not validate access token: %v", err)
 	}
 
 	// Delete test realm
@@ -171,7 +163,7 @@ func main() {
 		}
 		{
 			// email.
-			var users, err = client.GetUsers(accessToken, reqRealm, tstRealm, "email", "john.doe@cloudtrust.ch")
+			var users, err = client.GetUsers(accessToken, tstRealm, "email", "john.doe@cloudtrust.ch")
 			if err != nil {
 				log.Fatalf("could not get users: %v", err)
 			}
@@ -181,7 +173,7 @@ func main() {
 		}
 		{
 			// firstname.
-			var users, err = client.GetUsers(accessToken, reqRealm, tstRealm, "firstName", "John")
+			var users, err = client.GetUsers(accessToken, tstRealm, "firstName", "John")
 			if err != nil {
 				log.Fatalf("could not get users: %v", err)
 			}
@@ -192,7 +184,7 @@ func main() {
 		}
 		{
 			// lastname.
-			var users, err = client.GetUsers(accessToken, reqRealm, tstRealm, "lastName", "Wells")
+			var users, err = client.GetUsers(accessToken, tstRealm, "lastName", "Wells")
 			if err != nil {
 				log.Fatalf("could not get users: %v", err)
 			}
@@ -202,7 +194,7 @@ func main() {
 		}
 		{
 			// username.
-			var users, err = client.GetUsers(accessToken, reqRealm, tstRealm, "username", "lucia.nelson")
+			var users, err = client.GetUsers(accessToken, tstRealm, "username", "lucia.nelson")
 			if err != nil {
 				log.Fatalf("could not get users: %v", err)
 			}
@@ -212,7 +204,7 @@ func main() {
 		}
 		{
 			// first.
-			var users, err = client.GetUsers(accessToken, reqRealm, tstRealm, "max", "7")
+			var users, err = client.GetUsers(accessToken, tstRealm, "max", "7")
 			if err != nil {
 				log.Fatalf("could not get users: %v", err)
 			}
@@ -222,7 +214,7 @@ func main() {
 		}
 		{
 			// search.
-			var users, err = client.GetUsers(accessToken, reqRealm, tstRealm, "search", "le")
+			var users, err = client.GetUsers(accessToken, tstRealm, "search", "le")
 			if err != nil {
 				log.Fatalf("could not get users: %v", err)
 			}
@@ -239,7 +231,7 @@ func main() {
 		// Get user ID.
 		var userID string
 		{
-			var users, err = client.GetUsers(accessToken, reqRealm, tstRealm, "search", "Maria")
+			var users, err = client.GetUsers(accessToken, tstRealm, "search", "Maria")
 			if err != nil {
 				log.Fatalf("could not get Maria: %v", err)
 			}
@@ -266,7 +258,7 @@ func main() {
 		}
 		// Check that user was updated.
 		{
-			var users, err = client.GetUsers(accessToken, reqRealm, tstRealm, "search", "Maria")
+			var users, err = client.GetUsers(accessToken, tstRealm, "search", "Maria")
 			if err != nil {
 				log.Fatalf("could not get Maria: %v", err)
 			}
@@ -280,8 +272,7 @@ func main() {
 		fmt.Println("User updated.")
 		// Check credentials
 		{
-			tstRealmReq := "master"
-			var creds, err = client.GetCredentials(accessToken, tstRealmReq, userID)
+			var creds, err = client.GetCredentials(accessToken, tstRealm, userID)
 			if err != nil {
 				log.Fatalf("could not get credentials: %v", err)
 			}
@@ -296,7 +287,7 @@ func main() {
 		// Get user ID.
 		var userID string
 		{
-			var users, err = client.GetUsers(accessToken, reqRealm, tstRealm, "search", "Toni")
+			var users, err = client.GetUsers(accessToken, tstRealm, "search", "Toni")
 			if err != nil {
 				log.Fatalf("could not get Toni: %v", err)
 			}
@@ -351,8 +342,8 @@ func main() {
 }
 
 func getKeycloakConfig() *keycloak.Config {
-	var apiAddr = pflag.String("urlKc", "http://localhost:8080", "keycloak address")
-	var tokenAddr = pflag.String("url", "http://localhost:8080", "token address")
+	var apiAddr = pflag.String("urlKc", "http://localhost:8080/auth", "keycloak address")
+	var tokenAddr = pflag.String("url", "http://localhost:8080/auth/realms/master", "token address")
 	pflag.Parse()
 
 	return &keycloak.Config{
