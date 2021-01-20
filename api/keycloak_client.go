@@ -9,8 +9,8 @@ import (
 	"net/url"
 
 	commonhttp "github.com/cloudtrust/common-service/errors"
-	"github.com/cloudtrust/keycloak-client"
-	"github.com/cloudtrust/keycloak-client/toolbox"
+	"github.com/cloudtrust/keycloak-client/v3"
+	"github.com/cloudtrust/keycloak-client/v3/toolbox"
 	"github.com/pkg/errors"
 	"gopkg.in/h2non/gentleman.v2"
 	"gopkg.in/h2non/gentleman.v2/plugin"

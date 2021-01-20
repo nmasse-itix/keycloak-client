@@ -11,8 +11,8 @@ import (
 
 	"github.com/golang/mock/gomock"
 
-	"github.com/cloudtrust/keycloak-client"
-	"github.com/cloudtrust/keycloak-client/toolbox/mock"
+	"github.com/cloudtrust/keycloak-client/v3"
+	"github.com/cloudtrust/keycloak-client/v3/toolbox/mock"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 )
