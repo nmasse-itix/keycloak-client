@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/nmasse-itix/keycloak-client"
-	api "github.com/nmasse-itix/keycloak-client/api"
 	"github.com/spf13/pflag"
 )
 
@@ -21,7 +20,7 @@ const (
 func main() {
 	var conf = getKeycloakConfig()
 	fmt.Printf("Connecting to KC %s...\n", conf.AddrAPI)
-	var client, err = api.New(*conf)
+	var client, err = keycloak.NewClient(*conf)
 	if err != nil {
 		log.Fatalf("could not create keycloak client: %v", err)
 	}

@@ -1,10 +1,9 @@
-package api
+package keycloak
 
 import (
 	"fmt"
 	"net/url"
 
-	"github.com/nmasse-itix/keycloak-client"
 	"github.com/pkg/errors"
 	"gopkg.in/h2non/gentleman.v2"
 	"gopkg.in/h2non/gentleman.v2/plugin"
@@ -18,14 +17,14 @@ type Client struct {
 	httpClient *gentleman.Client
 }
 
-// New returns a keycloak client.
-func New(config keycloak.Config) (*Client, error) {
+// NewClient returns a keycloak client.
+func NewClient(config Config) (*Client, error) {
 	var uAPI *url.URL
 	{
 		var err error
 		uAPI, err = url.Parse(config.AddrAPI)
 		if err != nil {
-			return nil, errors.Wrap(err, keycloak.MsgErrCannotParse+"."+keycloak.APIURL)
+			return nil, errors.Wrap(err, MsgErrCannotParse+"."+APIURL)
 		}
 	}
 
@@ -60,7 +59,7 @@ func (c *Client) GetToken(realm string, username string, password string) (strin
 		var err error
 		resp, err = req.Do()
 		if err != nil {
-			return "", errors.Wrap(err, keycloak.MsgErrCannotObtain+"."+keycloak.TokenMsg)
+			return "", errors.Wrap(err, MsgErrCannotObtain+"."+TokenMsg)
 		}
 	}
 	defer resp.Close()
@@ -70,7 +69,7 @@ func (c *Client) GetToken(realm string, username string, password string) (strin
 		var err error
 		err = resp.JSON(&unmarshalledBody)
 		if err != nil {
-			return "", errors.Wrap(err, keycloak.MsgErrCannotUnmarshal+"."+keycloak.Response)
+			return "", errors.Wrap(err, MsgErrCannotUnmarshal+"."+Response)
 		}
 	}
 
@@ -79,7 +78,7 @@ func (c *Client) GetToken(realm string, username string, password string) (strin
 		var ok bool
 		accessToken, ok = unmarshalledBody["access_token"]
 		if !ok {
-			return "", fmt.Errorf(keycloak.MsgErrMissingParam + "." + keycloak.AccessToken)
+			return "", fmt.Errorf(MsgErrMissingParam + "." + AccessToken)
 		}
 	}
 
@@ -102,11 +101,11 @@ func (c *Client) get(accessToken string, data interface{}, plugins ...plugin.Plu
 		var err error
 		resp, err = req.Do()
 		if err != nil {
-			return errors.Wrap(err, keycloak.MsgErrCannotObtain+"."+keycloak.Response)
+			return errors.Wrap(err, MsgErrCannotObtain+"."+Response)
 		}
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 400 {
-			return keycloak.HTTPError{
+			return HTTPError{
 				HTTPStatus: resp.StatusCode,
 				Message:    string(resp.Bytes()),
 			}
@@ -119,7 +118,7 @@ func (c *Client) get(accessToken string, data interface{}, plugins ...plugin.Plu
 			_ = resp.Bytes()
 			return nil
 		default:
-			return fmt.Errorf("%s.%v", keycloak.MsgErrUnkownHTTPContentType, resp.Header.Get("Content-Type"))
+			return fmt.Errorf("%s.%v", MsgErrUnkownHTTPContentType, resp.Header.Get("Content-Type"))
 		}
 	}
 }
@@ -139,11 +138,11 @@ func (c *Client) post(accessToken string, data interface{}, plugins ...plugin.Pl
 		var err error
 		resp, err = req.Do()
 		if err != nil {
-			return "", errors.Wrap(err, keycloak.MsgErrCannotObtain+"."+keycloak.Response)
+			return "", errors.Wrap(err, MsgErrCannotObtain+"."+Response)
 		}
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 400 {
-			return "", keycloak.HTTPError{
+			return "", HTTPError{
 				HTTPStatus: resp.StatusCode,
 				Message:    string(resp.Bytes()),
 			}
@@ -178,11 +177,11 @@ func (c *Client) delete(accessToken string, plugins ...plugin.Plugin) error {
 		var err error
 		resp, err = req.Do()
 		if err != nil {
-			return errors.Wrap(err, keycloak.MsgErrCannotObtain+"."+keycloak.Response)
+			return errors.Wrap(err, MsgErrCannotObtain+"."+Response)
 		}
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 400 {
-			return keycloak.HTTPError{
+			return HTTPError{
 				HTTPStatus: resp.StatusCode,
 				Message:    string(resp.Bytes()),
 			}
@@ -207,11 +206,11 @@ func (c *Client) put(accessToken string, plugins ...plugin.Plugin) error {
 		var err error
 		resp, err = req.Do()
 		if err != nil {
-			return errors.Wrap(err, keycloak.MsgErrCannotObtain+"."+keycloak.Response)
+			return errors.Wrap(err, MsgErrCannotObtain+"."+Response)
 		}
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 400 {
-			return keycloak.HTTPError{
+			return HTTPError{
 				HTTPStatus: resp.StatusCode,
 				Message:    string(resp.Bytes()),
 			}

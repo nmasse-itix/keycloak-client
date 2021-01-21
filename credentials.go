@@ -1,7 +1,6 @@
-package api
+package keycloak
 
 import (
-	"github.com/nmasse-itix/keycloak-client"
 	"gopkg.in/h2non/gentleman.v2/plugins/body"
 	"gopkg.in/h2non/gentleman.v2/plugins/headers"
 	"gopkg.in/h2non/gentleman.v2/plugins/url"
@@ -23,13 +22,13 @@ var (
 )
 
 // ResetPassword resets password of the user.
-func (c *Client) ResetPassword(accessToken string, realmName, userID string, cred keycloak.CredentialRepresentation) error {
+func (c *Client) ResetPassword(accessToken string, realmName, userID string, cred CredentialRepresentation) error {
 	return c.put(accessToken, url.Path(resetPasswordPath), url.Param("realm", realmName), url.Param("id", userID), body.JSON(cred))
 }
 
 // GetCredentials returns the list of credentials of the user
-func (c *Client) GetCredentials(accessToken string, realmName string, userID string) ([]keycloak.CredentialRepresentation, error) {
-	var resp = []keycloak.CredentialRepresentation{}
+func (c *Client) GetCredentials(accessToken string, realmName string, userID string) ([]CredentialRepresentation, error) {
+	var resp = []CredentialRepresentation{}
 
 	var err = c.get(accessToken, &resp, url.Path(credentialsPath), url.Param("realm", realmName), url.Param("id", userID))
 	return resp, err

@@ -1,4 +1,4 @@
-package api
+package keycloak
 
 import (
 	"gopkg.in/h2non/gentleman.v2/plugins/url"

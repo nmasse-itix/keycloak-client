@@ -1,7 +1,6 @@
-package api
+package keycloak
 
 import (
-	"github.com/nmasse-itix/keycloak-client"
 	"gopkg.in/h2non/gentleman.v2/plugins/url"
 )
 
@@ -10,8 +9,8 @@ const (
 )
 
 // GetClientRegistrationPolicy is the base path to retrieve providers with the configProperties properly filled.
-func (c *Client) GetClientRegistrationPolicy(accessToken string, realmName, configID string) ([]keycloak.ComponentTypeRepresentation, error) {
-	var resp = []keycloak.ComponentTypeRepresentation{}
+func (c *Client) GetClientRegistrationPolicy(accessToken string, realmName, configID string) ([]ComponentTypeRepresentation, error) {
+	var resp = []ComponentTypeRepresentation{}
 	var err = c.get(accessToken, &resp, url.Path(clientRegistrationPolicyPath), url.Param("realm", realmName))
 	return resp, err
 }
