@@ -24,10 +24,6 @@ const (
 	TokenMsg         = "token"
 	Response         = "response"
 	AccessToken      = "accessToken"
-	OIDCProvider     = "OIDCProvider"
-	UserOrEmail      = "UsernameOrEmail"
-	Username         = "username"
-	Email            = "email"
 )
 
 // HTTPError is returned when an error occured while contacting the keycloak instance.

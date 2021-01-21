@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudtrust/keycloak-client/v3"
-	api "github.com/cloudtrust/keycloak-client/v3/api"
+	"github.com/nmasse-itix/keycloak-client"
+	api "github.com/nmasse-itix/keycloak-client/api"
 	"github.com/spf13/pflag"
 )
 

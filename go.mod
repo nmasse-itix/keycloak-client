@@ -1,9 +1,8 @@
-module github.com/cloudtrust/keycloak-client/v3
+module github.com/nmasse-itix/keycloak-client
 
 go 1.15
 
 require (
-	github.com/cloudtrust/common-service v2.3.2+incompatible
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gbrlsnchs/jwt/v2 v2.0.0
 	github.com/kr/pretty v0.1.0 // indirect

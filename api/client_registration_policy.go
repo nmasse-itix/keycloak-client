@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/cloudtrust/keycloak-client/v3"
+	"github.com/nmasse-itix/keycloak-client"
 	"gopkg.in/h2non/gentleman.v2/plugins/url"
 )
 
