@@ -2,7 +2,7 @@
 
 This Golang library provides Types and Methods to drive a Keycloak instance through its REST Admin interface.
 
-## Supported Features
+## Supported Features
 
 * **Realms**: CRUD, Export, Import
 * **Clients**: CRU
@@ -10,16 +10,6 @@ This Golang library provides Types and Methods to drive a Keycloak instance thro
 * **Components**: CRUD
 
 ## Hello, World example
-
-Create a directory for your project, initialize the Go module.
-
-```sh
-mkdir kc-test
-cd kc-test
-go mod init foo/bar
-```
-
-**main.go**:
 
 ```go
 package main
