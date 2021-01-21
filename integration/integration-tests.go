@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/url"
 	"strings"
 	"time"
 
@@ -12,7 +14,8 @@ import (
 )
 
 const (
-	tstRealm = "__internal"
+	tstRealm    = "__internal"
+	importRealm = "__test_import"
 )
 
 func main() {
@@ -29,8 +32,9 @@ func main() {
 		log.Fatalf("could not get access token: %v", err)
 	}
 
-	// Delete test realm
+	// Delete realms
 	client.DeleteRealm(accessToken, tstRealm)
+	client.DeleteRealm(accessToken, importRealm)
 
 	// Check existing realms
 	var initialRealms []keycloak.RealmRepresentation
@@ -319,6 +323,47 @@ func main() {
 		fmt.Println("User deleted.")
 	}
 
+	// Create component
+	{
+		var c, err = client.CreateComponent(accessToken, tstRealm, keycloak.ComponentRepresentation{
+			Name:         &ldapProviderName,
+			ProviderType: &ldapProviderType,
+			ProviderID:   &ldapProviderName,
+			Config:       &ldapProviderConfig,
+		})
+		if err != nil {
+			log.Fatalf("could not create ldap component: %v", err)
+		}
+		u, err := url.Parse(c)
+		if err != nil {
+			log.Fatalf("cannot : %v", err)
+		}
+		slugs := strings.Split(u.Path, "/")
+		parentID := slugs[len(slugs)-1]
+
+		for _, m := range ldapMapperAttrs {
+			var err error
+			config := keycloak.MultivaluedHashMap{
+				"ldap.attribute":              {m.ldapAttribute},
+				"is.mandatory.in.ldap":        {m.mandatory},
+				"always.read.value.from.ldap": {m.alwaysRead},
+				"read.only":                   {m.readonly},
+				"user.model.attribute":        {m.modelAttribute},
+			}
+			_, err = client.CreateComponent(accessToken, tstRealm, keycloak.ComponentRepresentation{
+				Name:         &m.name,
+				ProviderType: &ldapMapperType,
+				ProviderID:   &m.providerID,
+				Config:       &config,
+				ParentID:     &parentID,
+			})
+			if err != nil {
+				log.Fatalf("could not create ldap mapper component: %v", err)
+			}
+		}
+		fmt.Println("Components created.")
+	}
+
 	// Delete test realm.
 	{
 		var err = client.DeleteRealm(accessToken, tstRealm)
@@ -339,6 +384,47 @@ func main() {
 		}
 		fmt.Println("Test realm deleted.")
 	}
+
+	// Realm Import
+	{
+		var err error
+		var realm keycloak.RealmRepresentation
+		err = json.Unmarshal([]byte(realmContent), &realm)
+		if err != nil {
+			log.Fatalf("cannot read realm JSON: %s", err)
+		}
+
+		_, err = client.CreateRealm(accessToken, realm)
+		if err != nil {
+			log.Fatalf("could not create keycloak realm: %v", err)
+		}
+
+		components, err := client.GetComponents(accessToken, importRealm)
+		count := make(map[string]int)
+		for _, component := range components {
+			if component.ProviderType != nil {
+				count[*component.ProviderType]++
+			}
+		}
+		if count["org.keycloak.storage.UserStorageProvider"] != 1 {
+			log.Fatalf("wrong number of ldap components: %d", count["org.keycloak.storage.UserStorageProvider"])
+		}
+		if count["org.keycloak.storage.ldap.mappers.LDAPStorageMapper"] != 6 {
+			log.Fatalf("wrong number of ldap mapper components: %d", count["org.keycloak.storage.ldap.mappers.LDAPStorageMapper"])
+		}
+
+		fmt.Println("Test realm imported.")
+	}
+
+	// Delete imported realm.
+	{
+		var err = client.DeleteRealm(accessToken, importRealm)
+		if err != nil {
+			log.Fatalf("could not delete imported realm: %v", err)
+		}
+		fmt.Println("Test realm deleted.")
+	}
+
 }
 
 func getKeycloakConfig() *keycloak.Config {
@@ -408,3 +494,494 @@ var tstUsers = []struct {
 	{"Glenda", "Hogan"},
 	{"Lucia", "Nelson"},
 }
+
+var ldapProviderConfig keycloak.MultivaluedHashMap = keycloak.MultivaluedHashMap{
+	"pagination":                           []string{"true"},
+	"fullSyncPeriod":                       []string{"-1"},
+	"usersDn":                              []string{"ou=users,dc=keycloak,dc=org"},
+	"connectionPooling":                    []string{"true"},
+	"cachePolicy":                          []string{"DEFAULT"},
+	"useKerberosForPasswordAuthentication": []string{"false"},
+	"importEnabled":                        []string{"true"},
+	"enabled":                              []string{"true"},
+	"bindCredential":                       []string{"keycloak"},
+	"bindDn":                               []string{"cn=admin,dc=keycloak,dc=org"},
+	"changedSyncPeriod":                    []string{"-1"},
+	"usernameLDAPAttribute":                []string{"uid"},
+	"vendor":                               []string{"other"},
+	"uuidLDAPAttribute":                    []string{"entryUUID"},
+	"connectionUrl":                        []string{"ldap://openldap.dns.podman:389/"},
+	"allowKerberosAuthentication":          []string{"false"},
+	"syncRegistrations":                    []string{"false"},
+	"authType":                             []string{"simple"},
+	"debug":                                []string{"false"},
+	"searchScope":                          []string{"1"},
+	"useTruststoreSpi":                     []string{"ldapsOnly"},
+	"priority":                             []string{"0"},
+	"trustEmail":                           []string{"true"},
+	"userObjectClasses":                    []string{"inetOrgPerson, organizationalPerson"},
+	"rdnLDAPAttribute":                     []string{"uid"},
+	"editMode":                             []string{"READ_ONLY"},
+	"validatePasswordPolicy":               []string{"false"},
+	"batchSizeForSync":                     []string{"1000"},
+}
+var ldapProviderName string = "ldap"
+var ldapProviderType string = "org.keycloak.storage.UserStorageProvider"
+
+var ldapMapperType string = "org.keycloak.storage.ldap.mappers.LDAPStorageMapper"
+var ldapMapperAttrs = []struct {
+	name           string
+	providerID     string
+	ldapAttribute  string
+	mandatory      string
+	alwaysRead     string
+	readonly       string
+	modelAttribute string
+}{
+	{"modify date", "user-attribute-ldap-mapper", "modifyTimestamp", "false", "true", "true", "modifyTimestamp"},
+	{"username", "user-attribute-ldap-mapper", "uid", "true", "true", "false", "username"},
+	{"first name", "user-attribute-ldap-mapper", "cn", "true", "true", "true", "firstName"},
+	{"email", "user-attribute-ldap-mapper", "mail", "false", "false", "true", "email"},
+	{"last name", "user-attribute-ldap-mapper", "sn", "true", "true", "true", "lastName"},
+	{"creation date", "user-attribute-ldap-mapper", "createTimestamp", "false", "true", "true", "createTimestamp"},
+}
+
+var realmContent string = `
+{
+	"id": "__test_import",
+	"realm": "__test_import",
+	"displayName": "__test_import",
+	"notBefore": 0,
+	"revokeRefreshToken": false,
+	"refreshTokenMaxReuse": 0,
+	"accessTokenLifespan": 300,
+	"accessTokenLifespanForImplicitFlow": 900,
+	"ssoSessionIdleTimeout": 1800,
+	"ssoSessionMaxLifespan": 36000,
+	"offlineSessionIdleTimeout": 2592000,
+	"accessCodeLifespan": 60,
+	"accessCodeLifespanUserAction": 300,
+	"accessCodeLifespanLogin": 1800,
+	"actionTokenGeneratedByAdminLifespan": 43200,
+	"actionTokenGeneratedByUserLifespan": 300,
+	"enabled": true,
+	"sslRequired": "external",
+	"registrationAllowed": false,
+	"registrationEmailAsUsername": false,
+	"rememberMe": false,
+	"verifyEmail": false,
+	"loginWithEmailAllowed": true,
+	"duplicateEmailsAllowed": false,
+	"resetPasswordAllowed": false,
+	"editUsernameAllowed": false,
+	"bruteForceProtected": false,
+	"permanentLockout": false,
+	"maxFailureWaitSeconds": 900,
+	"minimumQuickLoginWaitSeconds": 60,
+	"waitIncrementSeconds": 60,
+	"quickLoginCheckMilliSeconds": 1000,
+	"maxDeltaTimeSeconds": 43200,
+	"failureFactor": 30,
+	"users": [
+	],
+	"roles": {
+	  "realm": [],
+	  "client": {}
+	},
+	"defaultRoles": [],
+	"requiredCredentials": [ "password" ],
+	"scopeMappings": [],
+	"clientScopeMappings": {},
+	"clients": [
+	  {
+		"clientId": "app_000000",
+		"name": "app_000000",
+		"enabled": true,
+		"publicClient": false,
+		"redirectUris": [
+		  "http://dummy/url"
+		],
+		"fullScopeAllowed": false,
+		"standardFlowEnabled": true,
+		"directAccessGrantsEnabled": true,
+		"serviceAccountsEnabled": true,
+		"clientAuthenticatorType": "client-secret",
+		"secret": "26dd19e8-cccf-4783-8e07-95c001209e88"
+	  },
+	  {
+		"clientId": "app_000001",
+		"name": "app_000001",
+		"enabled": true,
+		"publicClient": false,
+		"redirectUris": [
+		  "http://dummy/url"
+		],
+		"fullScopeAllowed": false,
+		"standardFlowEnabled": true,
+		"directAccessGrantsEnabled": true,
+		"serviceAccountsEnabled": true,
+		"clientAuthenticatorType": "client-secret",
+		"secret": "c0e1c9ba-94b5-4345-95cd-e75bd12840ac"
+	  },
+	  {
+		"clientId": "app_000002",
+		"name": "app_000002",
+		"enabled": true,
+		"publicClient": false,
+		"redirectUris": [
+		  "http://dummy/url"
+		],
+		"fullScopeAllowed": false,
+		"standardFlowEnabled": true,
+		"directAccessGrantsEnabled": true,
+		"serviceAccountsEnabled": true,
+		"clientAuthenticatorType": "client-secret",
+		"secret": "cc0d4bc0-5b68-47f1-a4ce-a263a1bc87fa"
+	  },
+	  {
+		"clientId": "app_000003",
+		"name": "app_000003",
+		"enabled": true,
+		"publicClient": false,
+		"redirectUris": [
+		  "http://dummy/url"
+		],
+		"fullScopeAllowed": false,
+		"standardFlowEnabled": true,
+		"directAccessGrantsEnabled": true,
+		"serviceAccountsEnabled": true,
+		"clientAuthenticatorType": "client-secret",
+		"secret": "fd9e46e2-1c07-4894-b33e-f82e0767d306"
+	  },
+	  {
+		"clientId": "app_000004",
+		"name": "app_000004",
+		"enabled": true,
+		"publicClient": false,
+		"redirectUris": [
+		  "http://dummy/url"
+		],
+		"fullScopeAllowed": false,
+		"standardFlowEnabled": true,
+		"directAccessGrantsEnabled": true,
+		"serviceAccountsEnabled": true,
+		"clientAuthenticatorType": "client-secret",
+		"secret": "8258e375-11ea-4623-8666-79e5208b226d"
+	  },
+	  {
+		"clientId": "app_000005",
+		"name": "app_000005",
+		"enabled": true,
+		"publicClient": false,
+		"redirectUris": [
+		  "http://dummy/url"
+		],
+		"fullScopeAllowed": false,
+		"standardFlowEnabled": true,
+		"directAccessGrantsEnabled": true,
+		"serviceAccountsEnabled": true,
+		"clientAuthenticatorType": "client-secret",
+		"secret": "6d32184c-de0f-4c59-a3dc-518b24a63a36"
+	  },
+	  {
+		"clientId": "app_000006",
+		"name": "app_000006",
+		"enabled": true,
+		"publicClient": false,
+		"redirectUris": [
+		  "http://dummy/url"
+		],
+		"fullScopeAllowed": false,
+		"standardFlowEnabled": true,
+		"directAccessGrantsEnabled": true,
+		"serviceAccountsEnabled": true,
+		"clientAuthenticatorType": "client-secret",
+		"secret": "934630e9-513f-4561-bf0d-b43b15ef8d11"
+	  },
+	  {
+		"clientId": "app_000007",
+		"name": "app_000007",
+		"enabled": true,
+		"publicClient": false,
+		"redirectUris": [
+		  "http://dummy/url"
+		],
+		"fullScopeAllowed": false,
+		"standardFlowEnabled": true,
+		"directAccessGrantsEnabled": true,
+		"serviceAccountsEnabled": true,
+		"clientAuthenticatorType": "client-secret",
+		"secret": "9ed0b1f7-d49a-4f19-b448-bc5777e0ba91"
+	  },
+	  {
+		"clientId": "app_000008",
+		"name": "app_000008",
+		"enabled": true,
+		"publicClient": false,
+		"redirectUris": [
+		  "http://dummy/url"
+		],
+		"fullScopeAllowed": false,
+		"standardFlowEnabled": true,
+		"directAccessGrantsEnabled": true,
+		"serviceAccountsEnabled": true,
+		"clientAuthenticatorType": "client-secret",
+		"secret": "464b8054-620c-4226-a726-e60ab267b11b"
+	  },
+	  {
+		"clientId": "app_000009",
+		"name": "app_000009",
+		"enabled": true,
+		"publicClient": false,
+		"redirectUris": [
+		  "http://dummy/url"
+		],
+		"fullScopeAllowed": false,
+		"standardFlowEnabled": true,
+		"directAccessGrantsEnabled": true,
+		"serviceAccountsEnabled": true,
+		"clientAuthenticatorType": "client-secret",
+		"secret": "78313217-1ff8-461a-b944-80bb76c01731"
+	  }
+	],
+	"components": {
+	  "org.keycloak.storage.UserStorageProvider": [
+		{
+		  "id": "84981250-eda0-4758-991e-ea6d79794d44",
+		  "name": "ldap",
+		  "providerId": "ldap",
+		  "subComponents": {
+			"org.keycloak.storage.ldap.mappers.LDAPStorageMapper": [
+			  {
+				"id": "cea411ae-009d-44a7-b964-27f23cb8c753",
+				"name": "modify date",
+				"providerId": "user-attribute-ldap-mapper",
+				"subComponents": {},
+				"config": {
+				  "ldap.attribute": [
+					"modifyTimestamp"
+				  ],
+				  "is.mandatory.in.ldap": [
+					"false"
+				  ],
+				  "always.read.value.from.ldap": [
+					"true"
+				  ],
+				  "read.only": [
+					"true"
+				  ],
+				  "user.model.attribute": [
+					"modifyTimestamp"
+				  ]
+				}
+			  },
+			  {
+				"id": "ef8a7263-7db3-4131-9ba9-1e92211691b3",
+				"name": "username",
+				"providerId": "user-attribute-ldap-mapper",
+				"subComponents": {},
+				"config": {
+				  "ldap.attribute": [
+					"uid"
+				  ],
+				  "is.mandatory.in.ldap": [
+					"true"
+				  ],
+				  "read.only": [
+					"true"
+				  ],
+				  "always.read.value.from.ldap": [
+					"false"
+				  ],
+				  "user.model.attribute": [
+					"username"
+				  ]
+				}
+			  },
+			  {
+				"id": "f00c2b5a-be41-4990-bdd0-165dbd47d6c2",
+				"name": "first name",
+				"providerId": "user-attribute-ldap-mapper",
+				"subComponents": {},
+				"config": {
+				  "ldap.attribute": [
+					"cn"
+				  ],
+				  "is.mandatory.in.ldap": [
+					"true"
+				  ],
+				  "read.only": [
+					"true"
+				  ],
+				  "always.read.value.from.ldap": [
+					"true"
+				  ],
+				  "user.model.attribute": [
+					"firstName"
+				  ]
+				}
+			  },
+			  {
+				"id": "18349fe8-c8ff-4a1a-a588-8b0a1f13b880",
+				"name": "email",
+				"providerId": "user-attribute-ldap-mapper",
+				"subComponents": {},
+				"config": {
+				  "ldap.attribute": [
+					"mail"
+				  ],
+				  "is.mandatory.in.ldap": [
+					"false"
+				  ],
+				  "always.read.value.from.ldap": [
+					"false"
+				  ],
+				  "read.only": [
+					"true"
+				  ],
+				  "user.model.attribute": [
+					"email"
+				  ]
+				}
+			  },
+			  {
+				"id": "0f59a566-2306-4df4-ad54-2d0c33dc2267",
+				"name": "last name",
+				"providerId": "user-attribute-ldap-mapper",
+				"subComponents": {},
+				"config": {
+				  "ldap.attribute": [
+					"sn"
+				  ],
+				  "is.mandatory.in.ldap": [
+					"true"
+				  ],
+				  "always.read.value.from.ldap": [
+					"true"
+				  ],
+				  "read.only": [
+					"true"
+				  ],
+				  "user.model.attribute": [
+					"lastName"
+				  ]
+				}
+			  },
+			  {
+				"id": "656aa6c4-fc6c-4d2e-a61d-246872ad45f3",
+				"name": "creation date",
+				"providerId": "user-attribute-ldap-mapper",
+				"subComponents": {},
+				"config": {
+				  "ldap.attribute": [
+					"createTimestamp"
+				  ],
+				  "is.mandatory.in.ldap": [
+					"false"
+				  ],
+				  "always.read.value.from.ldap": [
+					"true"
+				  ],
+				  "read.only": [
+					"true"
+				  ],
+				  "user.model.attribute": [
+					"createTimestamp"
+				  ]
+				}
+			  }
+			]
+		  },
+		  "config": {
+			"pagination": [
+			  "true"
+			],
+			"fullSyncPeriod": [
+			  "-1"
+			],
+			"usersDn": [
+			  "ou=users,dc=keycloak,dc=org"
+			],
+			"connectionPooling": [
+			  "true"
+			],
+			"cachePolicy": [
+			  "DEFAULT"
+			],
+			"useKerberosForPasswordAuthentication": [
+			  "false"
+			],
+			"importEnabled": [
+			  "true"
+			],
+			"enabled": [
+			  "true"
+			],
+			"bindCredential": [
+			  "keycloak"
+			],
+			"bindDn": [
+			  "cn=admin,dc=keycloak,dc=org"
+			],
+			"changedSyncPeriod": [
+			  "-1"
+			],
+			"usernameLDAPAttribute": [
+			  "uid"
+			],
+			"lastSync": [
+			  "1611161804"
+			],
+			"vendor": [
+			  "other"
+			],
+			"uuidLDAPAttribute": [
+			  "entryUUID"
+			],
+			"connectionUrl": [
+			  "ldap://openldap.dns.podman:389/"
+			],
+			"allowKerberosAuthentication": [
+			  "false"
+			],
+			"syncRegistrations": [
+			  "false"
+			],
+			"authType": [
+			  "simple"
+			],
+			"debug": [
+			  "false"
+			],
+			"searchScope": [
+			  "1"
+			],
+			"useTruststoreSpi": [
+			  "ldapsOnly"
+			],
+			"priority": [
+			  "0"
+			],
+			"trustEmail": [
+			  "true"
+			],
+			"userObjectClasses": [
+			  "inetOrgPerson, organizationalPerson"
+			],
+			"rdnLDAPAttribute": [
+			  "uid"
+			],
+			"editMode": [
+			  "READ_ONLY"
+			],
+			"validatePasswordPolicy": [
+			  "false"
+			],
+			"batchSizeForSync": [
+			  "1000"
+			]
+		  }
+		}
+	  ]
+	}
+}`

@@ -189,14 +189,17 @@ type ClientTemplateRepresentation struct {
 	StandardFlowEnabled       *bool                           `json:"standardFlowEnabled,omitempty"`
 }
 
+// ComponentsExportRepresentation struct
+type ComponentsExportRepresentation map[string][]ComponentExportRepresentation
+
 // ComponentExportRepresentation struct
 type ComponentExportRepresentation struct {
-	Config        *MultivaluedHashMap `json:"config,omitempty"`
-	ID            *string             `json:"id,omitempty"`
-	Name          *string             `json:"name,omitempty"`
-	ProviderID    *string             `json:"providerId,omitempty"`
-	SubComponents *MultivaluedHashMap `json:"subComponents,omitempty"`
-	SubType       *string             `json:"subType,omitempty"`
+	Config        *MultivaluedHashMap             `json:"config,omitempty"`
+	ID            *string                         `json:"id,omitempty"`
+	Name          *string                         `json:"name,omitempty"`
+	ProviderID    *string                         `json:"providerId,omitempty"`
+	SubComponents *ComponentsExportRepresentation `json:"subComponents,omitempty"`
+	SubType       *string                         `json:"subType,omitempty"`
 }
 
 // ComponentRepresentation struct
@@ -355,11 +358,7 @@ type MemoryInfoRepresentation struct {
 }
 
 // MultivaluedHashMap struct
-type MultivaluedHashMap struct {
-	Empty      *bool  `json:"empty,omitempty"`
-	LoadFactor *int32 `json:"loadFactor,omitempty"`
-	Threshold  *int32 `json:"threshold,omitempty"`
-}
+type MultivaluedHashMap map[string][]string
 
 // PartialImportRepresentation struct
 type PartialImportRepresentation struct {
@@ -451,7 +450,7 @@ type RealmRepresentation struct {
 	ClientScopeMappings                 *map[string]interface{}                 `json:"clientScopeMappings,omitempty"`
 	ClientTemplates                     *[]ClientTemplateRepresentation         `json:"clientTemplates,omitempty"`
 	Clients                             *[]ClientRepresentation                 `json:"clients,omitempty"`
-	Components                          *MultivaluedHashMap                     `json:"components,omitempty"`
+	Components                          *ComponentsExportRepresentation         `json:"components,omitempty"`
 	DefaultGroups                       *[]string                               `json:"defaultGroups,omitempty"`
 	DefaultLocale                       *string                                 `json:"defaultLocale,omitempty"`
 	DefaultRoles                        *[]string                               `json:"defaultRoles,omitempty"`
